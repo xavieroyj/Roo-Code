@@ -213,6 +213,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		includeCurrentTime,
 		includeCurrentCost,
 		maxGitStatusFiles,
+		taskHistoryRetention,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -426,6 +427,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					includeCurrentTime: includeCurrentTime ?? true,
 					includeCurrentCost: includeCurrentCost ?? true,
 					maxGitStatusFiles: maxGitStatusFiles ?? 0,
+					taskHistoryRetention: taskHistoryRetention ?? "never",
 					profileThresholds,
 					imageGenerationProvider,
 					openRouterImageApiKey,
@@ -616,6 +618,17 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 	// Determine which tab content to render (for indexing or active display)
 	const renderTab = isIndexing ? sectionNames[indexingTabIndex] : activeTab
+
+	type TaskHistoryRetentionSetting = React.ComponentProps<typeof About>["taskHistoryRetention"]
+	const normalizedTaskHistoryRetention: TaskHistoryRetentionSetting =
+		taskHistoryRetention === "never" ||
+		taskHistoryRetention === "90" ||
+		taskHistoryRetention === "60" ||
+		taskHistoryRetention === "30" ||
+		taskHistoryRetention === "7" ||
+		taskHistoryRetention === "3"
+			? taskHistoryRetention
+			: "never"
 
 	// Handle search navigation - switch to the correct tab and scroll to the element
 	const handleSearchNavigate = useCallback(
@@ -944,6 +957,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 								setTelemetrySetting={setTelemetrySetting}
 								debug={cachedState.debug}
 								setDebug={setDebug}
+								taskHistoryRetention={normalizedTaskHistoryRetention}
+								setTaskHistoryRetention={(value) => setCachedStateField("taskHistoryRetention", value)}
 							/>
 						)}
 					</SearchIndexProvider>
