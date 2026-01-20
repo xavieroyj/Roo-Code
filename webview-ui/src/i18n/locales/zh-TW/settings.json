@@ -921,6 +921,15 @@
 			"3": "3天"
 		}
 	},
+	"taskHistoryStorage": {
+		"label": "儲存空間使用量",
+		"calculating": "計算中...",
+		"format": "{{size}} ({{count}} 個工作)",
+		"formatSingular": "{{size}} (1 個工作)",
+		"empty": "無已儲存工作",
+		"refresh": "重新整理",
+		"error": "無法計算"
+	},
 	"footer": {
 		"feedback": "若您有任何問題或建議，歡迎至 <githubLink>github.com/RooCodeInc/Roo-Code</githubLink> 提出 issue，或加入 <redditLink>reddit.com/r/RooCode</redditLink> 或 <discordLink>discord.gg/roocode</discordLink> 討論。",
 		"telemetry": {
