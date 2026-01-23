@@ -28,7 +28,10 @@
 		"openInCloud": "Otwórz zadanie w Roo Code Cloud",
 		"openInCloudIntro": "Kontynuuj monitorowanie lub interakcję z Roo z dowolnego miejsca. Zeskanuj, kliknij lub skopiuj, aby otworzyć.",
 		"openApiHistory": "Otwórz historię API",
-		"openUiHistory": "Otwórz historię UI"
+		"openUiHistory": "Otwórz historię UI",
+		"restoreToStart": "Przywróć obszar roboczy do początku zadania",
+		"restoreToStartConfirm": "Spowoduje to zresetowanie wszystkich plików w obszarze roboczym do stanu z momentu utworzenia tego zadania. Zmiany wprowadzone przez to zadanie, przez inne zadania lub ręcznie zostaną cofnięte. Ta operacja nie może być cofnięta.",
+		"restoreToStartButton": "Przywróć"
 	},
 	"unpin": "Odepnij",
 	"pin": "Przypnij",

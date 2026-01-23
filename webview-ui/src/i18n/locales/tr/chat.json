@@ -28,7 +28,10 @@
 		"openInCloud": "Görevi Roo Code Cloud'da aç",
 		"openInCloudIntro": "Roo'yu her yerden izlemeye veya etkileşime devam et. Açmak için tara, tıkla veya kopyala.",
 		"openApiHistory": "API Geçmişini Aç",
-		"openUiHistory": "UI Geçmişini Aç"
+		"openUiHistory": "UI Geçmişini Aç",
+		"restoreToStart": "Çalışma alanını görev başlangıcına geri yükle",
+		"restoreToStartConfirm": "Bu, çalışma alanındaki tüm dosyaları bu görev oluşturulduğundaki durumlarına sıfırlayacaktır. Bu görev tarafından, diğer görevler tarafından veya manuel olarak yapılan değişiklikler geri alınacaktır. Bu işlem geri alınamaz.",
+		"restoreToStartButton": "Geri Yükle"
 	},
 	"unpin": "Sabitlemeyi iptal et",
 	"pin": "Sabitle",
