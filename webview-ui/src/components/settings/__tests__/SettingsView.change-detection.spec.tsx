@@ -124,6 +124,9 @@ vi.mock("../SlashCommandsSettings", () => ({
 vi.mock("../UISettings", () => ({
 	UISettings: () => null,
 }))
+vi.mock("../IndexingSettings", () => ({
+	IndexingSettings: () => null,
+}))
 
 vi.mock("../SettingsSearch", () => ({
 	SettingsSearch: () => null,

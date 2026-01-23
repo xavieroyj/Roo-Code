@@ -6,7 +6,7 @@ import { Trans } from "react-i18next"
 import { buildDocLink } from "@src/utils/docLinks"
 import { useEvent, useMount } from "react-use"
 
-import { type ExtensionMessage } from "@roo-code/types"
+import { type ExtensionMessage, settingDefaults } from "@roo-code/types"
 
 import { cn } from "@/lib/utils"
 import { Slider } from "@/components/ui"
@@ -111,11 +111,13 @@ export const TerminalSettings = ({
 									min={100}
 									max={5000}
 									step={100}
-									value={[terminalOutputLineLimit ?? 500]}
+									value={[terminalOutputLineLimit ?? settingDefaults.terminalOutputLineLimit]}
 									onValueChange={([value]) => setCachedStateField("terminalOutputLineLimit", value)}
 									data-testid="terminal-output-limit-slider"
 								/>
-								<span className="w-10">{terminalOutputLineLimit ?? 500}</span>
+								<span className="w-10">
+									{terminalOutputLineLimit ?? settingDefaults.terminalOutputLineLimit}
+								</span>
 							</div>
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
 								<Trans i18nKey="settings:terminal.outputLineLimit.description">
@@ -142,13 +144,17 @@ export const TerminalSettings = ({
 									min={1000}
 									max={100000}
 									step={1000}
-									value={[terminalOutputCharacterLimit ?? 50000]}
+									value={[
+										terminalOutputCharacterLimit ?? settingDefaults.terminalOutputCharacterLimit,
+									]}
 									onValueChange={([value]) =>
 										setCachedStateField("terminalOutputCharacterLimit", value)
 									}
 									data-testid="terminal-output-character-limit-slider"
 								/>
-								<span className="w-16">{terminalOutputCharacterLimit ?? 50000}</span>
+								<span className="w-16">
+									{terminalOutputCharacterLimit ?? settingDefaults.terminalOutputCharacterLimit}
+								</span>
 							</div>
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
 								<Trans i18nKey="settings:terminal.outputCharacterLimit.description">
@@ -275,7 +281,10 @@ export const TerminalSettings = ({
 											min={1000}
 											max={60000}
 											step={1000}
-											value={[terminalShellIntegrationTimeout ?? 5000]}
+											value={[
+												terminalShellIntegrationTimeout ??
+													settingDefaults.terminalShellIntegrationTimeout,
+											]}
 											onValueChange={([value]) =>
 												setCachedStateField(
 													"terminalShellIntegrationTimeout",
@@ -284,7 +293,9 @@ export const TerminalSettings = ({
 											}
 										/>
 										<span className="w-10">
-											{(terminalShellIntegrationTimeout ?? 5000) / 1000}s
+											{(terminalShellIntegrationTimeout ??
+												settingDefaults.terminalShellIntegrationTimeout) / 1000}
+											s
 										</span>
 									</div>
 									<div className="text-vscode-descriptionForeground text-sm mt-1">
