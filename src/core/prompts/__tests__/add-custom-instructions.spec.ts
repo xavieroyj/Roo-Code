@@ -210,6 +210,7 @@ describe("addCustomInstructions", () => {
 			undefined, // customModePrompts
 			undefined, // customModes
 			undefined, // globalCustomInstructions
+			undefined, // diffEnabled
 			undefined, // experiments
 			undefined, // language
 			undefined, // rooIgnoreInstructions
@@ -231,6 +232,7 @@ describe("addCustomInstructions", () => {
 			undefined, // customModePrompts
 			undefined, // customModes
 			undefined, // globalCustomInstructions
+			undefined, // diffEnabled
 			undefined, // experiments
 			undefined, // language
 			undefined, // rooIgnoreInstructions
@@ -254,6 +256,7 @@ describe("addCustomInstructions", () => {
 			undefined, // customModePrompts
 			undefined, // customModes,
 			undefined, // globalCustomInstructions
+			undefined, // diffEnabled
 			undefined, // experiments
 			undefined, // language
 			undefined, // rooIgnoreInstructions
@@ -280,6 +283,7 @@ describe("addCustomInstructions", () => {
 			undefined, // customModePrompts
 			undefined, // customModes,
 			undefined, // globalCustomInstructions
+			undefined, // diffEnabled
 			undefined, // experiments
 			undefined, // language
 			undefined, // rooIgnoreInstructions
@@ -302,6 +306,7 @@ describe("addCustomInstructions", () => {
 			undefined, // customModePrompts
 			undefined, // customModes,
 			undefined, // globalCustomInstructions
+			undefined, // diffEnabled
 			undefined, // experiments
 			undefined, // language
 			undefined, // rooIgnoreInstructions

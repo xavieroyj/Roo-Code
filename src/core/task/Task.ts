@@ -3674,6 +3674,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				customModePrompts,
 				customModes,
 				customInstructions,
+				undefined, // diffEnabled
 				experiments,
 				language,
 				rooIgnoreInstructions,
