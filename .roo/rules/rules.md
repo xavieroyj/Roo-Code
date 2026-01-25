@@ -22,3 +22,13 @@
     - Use Tailwind CSS classes instead of inline style objects for new markup
     - VSCode CSS variables must be added to webview-ui/src/index.css before using them in Tailwind classes
     - Example: `<div className="text-md text-vscode-descriptionForeground mb-2" />` instead of style objects
+
+4. Internationalization:
+
+    - All user-facing strings must be internationalized using the `t()` function from `src/i18n`
+    - Import the translation function: `import { t } from "../i18n"`
+    - Add translation keys to all language files in `src/i18n/locales/[lang]/[namespace].json`
+    - Supported languages: ca, de, es, fr, hi, id, it, ja, ko, nl, pl, pt-BR, ru, tr, vi, zh-CN, zh-TW
+    - Common namespaces: common, embeddings, marketplace, mcp, tools, worktrees
+    - Example: `t("common:welcome")` instead of `"Welcome"`
+    - Never hardcode user-facing text in English or any other language
