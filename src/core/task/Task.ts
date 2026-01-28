@@ -1573,6 +1573,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
+	private async getFilesReadByRooSafely(context: string): Promise<string[] | undefined> {
+		try {
+			return await this.fileContextTracker.getFilesReadByRoo()
+		} catch (error) {
+			console.error(`[Task#${context}] Failed to get files read by Roo:`, error)
+			return undefined
+		}
+	}
+
 	public async condenseContext(): Promise<void> {
 		// CRITICAL: Flush any pending tool results before condensing
 		// to ensure tool_use/tool_result pairs are complete in history
@@ -1623,6 +1632,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// Generate environment details to include in the condensed summary
 		const environmentDetails = await getEnvironmentDetails(this, true)
 
+		const filesReadByRoo = await this.getFilesReadByRooSafely("condenseContext")
+
 		const {
 			messages,
 			summary,
@@ -1631,16 +1642,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			error,
 			errorDetails,
 			condenseId,
-		} = await summarizeConversation(
-			this.apiConversationHistory,
-			this.api, // Main API handler (fallback)
-			systemPrompt, // Default summarization prompt (fallback)
-			this.taskId,
-			false, // manual trigger
-			customCondensingPrompt, // User's custom prompt
-			metadata, // Pass metadata with tools
-			environmentDetails, // Include environment details in summary
-		)
+		} = await summarizeConversation({
+			messages: this.apiConversationHistory,
+			apiHandler: this.api,
+			systemPrompt,
+			taskId: this.taskId,
+			isAutomaticTrigger: false,
+			customCondensingPrompt,
+			metadata,
+			environmentDetails,
+			filesReadByRoo,
+			cwd: this.cwd,
+			rooIgnoreController: this.rooIgnoreController,
+		})
 		if (error) {
 			await this.say(
 				"condense_context_error",
@@ -2983,58 +2997,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						}
 					}
 
-					// Finalize any remaining streaming tool calls that weren't explicitly ended
-					// This is critical for MCP tools which need tool_call_end events to be properly
-					// converted from ToolUse to McpToolUse via finalizeStreamingToolCall()
-					const finalizeEvents = NativeToolCallParser.finalizeRawChunks()
-					for (const event of finalizeEvents) {
-						if (event.type === "tool_call_end") {
-							// Finalize the streaming tool call
-							const finalToolUse = NativeToolCallParser.finalizeStreamingToolCall(event.id)
-
-							// Get the index for this tool call
-							const toolUseIndex = this.streamingToolCallIndices.get(event.id)
-
-							if (finalToolUse) {
-								// Store the tool call ID
-								;(finalToolUse as any).id = event.id
-
-								// Get the index and replace partial with final
-								if (toolUseIndex !== undefined) {
-									this.assistantMessageContent[toolUseIndex] = finalToolUse
-								}
-
-								// Clean up tracking
-								this.streamingToolCallIndices.delete(event.id)
-
-								// Mark that we have new content to process
-								this.userMessageContentReady = false
-
-								// Present the finalized tool call
-								presentAssistantMessage(this)
-							} else if (toolUseIndex !== undefined) {
-								// finalizeStreamingToolCall returned null (malformed JSON or missing args)
-								// We still need to mark the tool as non-partial so it gets executed
-								// The tool's validation will catch any missing required parameters
-								const existingToolUse = this.assistantMessageContent[toolUseIndex]
-								if (existingToolUse && existingToolUse.type === "tool_use") {
-									existingToolUse.partial = false
-									// Ensure it has the ID for native protocol
-									;(existingToolUse as any).id = event.id
-								}
-
-								// Clean up tracking
-								this.streamingToolCallIndices.delete(event.id)
-
-								// Mark that we have new content to process
-								this.userMessageContentReady = false
-
-								// Present the tool call - validation will handle missing params
-								presentAssistantMessage(this)
-							}
-						}
-					}
-
 					// Create a copy of current token values to avoid race conditions
 					const currentTokens = {
 						input: inputTokens,
@@ -3282,6 +3244,61 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// the case, `presentAssistantMessage` relies on these blocks either
 				// to be completed or the user to reject a block in order to proceed
 				// and eventually set userMessageContentReady to true.)
+
+				// Finalize any remaining streaming tool calls that weren't explicitly ended
+				// This is critical for MCP tools which need tool_call_end events to be properly
+				// converted from ToolUse to McpToolUse via finalizeStreamingToolCall()
+				const finalizeEvents = NativeToolCallParser.finalizeRawChunks()
+				for (const event of finalizeEvents) {
+					if (event.type === "tool_call_end") {
+						// Finalize the streaming tool call
+						const finalToolUse = NativeToolCallParser.finalizeStreamingToolCall(event.id)
+
+						// Get the index for this tool call
+						const toolUseIndex = this.streamingToolCallIndices.get(event.id)
+
+						if (finalToolUse) {
+							// Store the tool call ID
+							;(finalToolUse as any).id = event.id
+
+							// Get the index and replace partial with final
+							if (toolUseIndex !== undefined) {
+								this.assistantMessageContent[toolUseIndex] = finalToolUse
+							}
+
+							// Clean up tracking
+							this.streamingToolCallIndices.delete(event.id)
+
+							// Mark that we have new content to process
+							this.userMessageContentReady = false
+
+							// Present the finalized tool call
+							presentAssistantMessage(this)
+						} else if (toolUseIndex !== undefined) {
+							// finalizeStreamingToolCall returned null (malformed JSON or missing args)
+							// We still need to mark the tool as non-partial so it gets executed
+							// The tool's validation will catch any missing required parameters
+							const existingToolUse = this.assistantMessageContent[toolUseIndex]
+							if (existingToolUse && existingToolUse.type === "tool_use") {
+								existingToolUse.partial = false
+								// Ensure it has the ID for native protocol
+								;(existingToolUse as any).id = event.id
+							}
+
+							// Clean up tracking
+							this.streamingToolCallIndices.delete(event.id)
+
+							// Mark that we have new content to process
+							this.userMessageContentReady = false
+
+							// Present the tool call - validation will handle missing params
+							presentAssistantMessage(this)
+						}
+					}
+				}
+
+				// IMPORTANT: Capture partialBlocks AFTER finalizeRawChunks() to avoid double-presentation.
+				// Tools finalized above are already presented, so we only want blocks still partial after finalization.
 				const partialBlocks = this.assistantMessageContent.filter((block) => block.partial)
 				partialBlocks.forEach((block) => (block.partial = false))
 
@@ -3289,16 +3306,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// this.assistantMessageContent.forEach((e) => (e.partial = false))
 
 				// No legacy streaming parser to finalize.
-
-				// Present any partial blocks that were just completed.
-				// Tool calls are typically presented during streaming via tool_call_partial events,
-				// but we still present here if any partial blocks remain (e.g., malformed streams).
-				if (partialBlocks.length > 0) {
-					// If there is content to update then it will complete and
-					// update `this.userMessageContentReady` to true, which we
-					// `pWaitFor` before making the next request.
-					presentAssistantMessage(this)
-				}
 
 				// Note: updateApiReqMsg() is now called from within drainStreamInBackgroundToFindAllUsage
 				// to ensure usage data is captured even when the stream is interrupted. The background task
@@ -3324,10 +3331,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 				// No legacy text-stream tool parser state to reset.
 
-				// Now add to apiConversationHistory.
-				// Need to save assistant responses to file before proceeding to
-				// tool use since user can exit at any moment and we wouldn't be
-				// able to save the assistant's response.
+				// CRITICAL: Save assistant message to API history BEFORE executing tools.
+				// This ensures that when new_task triggers delegation and calls flushPendingToolResultsToHistory(),
+				// the assistant message is already in history. Otherwise, tool_result blocks would appear
+				// BEFORE their corresponding tool_use blocks, causing API errors.
 
 				// Check if we have any content to process (text or tool uses)
 				const hasTextContent = assistantMessage.length > 0
@@ -3424,13 +3431,69 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						}
 					}
 
+					// Enforce new_task isolation: if new_task is called alongside other tools,
+					// truncate any tools that come after it and inject error tool_results.
+					// This prevents orphaned tools when delegation disposes the parent task.
+					const newTaskIndex = assistantContent.findIndex(
+						(block) => block.type === "tool_use" && block.name === "new_task",
+					)
+
+					if (newTaskIndex !== -1 && newTaskIndex < assistantContent.length - 1) {
+						// new_task found but not last - truncate subsequent tools
+						const truncatedTools = assistantContent.slice(newTaskIndex + 1)
+						assistantContent.length = newTaskIndex + 1 // Truncate API history array
+
+						// ALSO truncate the execution array (assistantMessageContent) to prevent
+						// tools after new_task from being executed by presentAssistantMessage().
+						// Find new_task index in assistantMessageContent (may differ from assistantContent
+						// due to text blocks being structured differently).
+						const executionNewTaskIndex = this.assistantMessageContent.findIndex(
+							(block) => block.type === "tool_use" && block.name === "new_task",
+						)
+						if (executionNewTaskIndex !== -1) {
+							this.assistantMessageContent.length = executionNewTaskIndex + 1
+						}
+
+						// Pre-inject error tool_results for truncated tools
+						for (const tool of truncatedTools) {
+							if (tool.type === "tool_use" && (tool as Anthropic.ToolUseBlockParam).id) {
+								this.pushToolResultToUserContent({
+									type: "tool_result",
+									tool_use_id: (tool as Anthropic.ToolUseBlockParam).id,
+									content:
+										"This tool was not executed because new_task was called in the same message turn. The new_task tool must be the last tool in a message.",
+									is_error: true,
+								})
+							}
+						}
+					}
+
+					// Save assistant message BEFORE executing tools
+					// This is critical for new_task: when it triggers delegation, flushPendingToolResultsToHistory()
+					// will save the user message with tool_results. The assistant message must already be in history
+					// so that tool_result blocks appear AFTER their corresponding tool_use blocks.
 					await this.addToApiConversationHistory(
 						{ role: "assistant", content: assistantContent },
 						reasoningMessage || undefined,
 					)
 
 					TelemetryService.instance.captureConversationMessage(this.taskId, "assistant")
+				}
 
+				// Present any partial blocks that were just completed.
+				// Tool calls are typically presented during streaming via tool_call_partial events,
+				// but we still present here if any partial blocks remain (e.g., malformed streams).
+				// NOTE: This MUST happen AFTER saving the assistant message to API history.
+				// When new_task is in the batch, it triggers delegation which calls flushPendingToolResultsToHistory().
+				// If the assistant message isn't saved yet, tool_results would appear before tool_use blocks.
+				if (partialBlocks.length > 0) {
+					// If there is content to update then it will complete and
+					// update `this.userMessageContentReady` to true, which we
+					// `pWaitFor` before making the next request.
+					presentAssistantMessage(this)
+				}
+
+				if (hasTextContent || hasToolUses) {
 					// NOTE: This comment is here for future reference - this was a
 					// workaround for `userMessageContent` not getting set to true.
 					// It was due to it not recursively calling for partial blocks
@@ -3990,6 +4053,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				? await getEnvironmentDetails(this, true)
 				: undefined
 
+			// Get files read by Roo for code folding - only when context management will run
+			const contextMgmtFilesReadByRoo =
+				contextManagementWillRun && autoCondenseContext
+					? await this.getFilesReadByRooSafely("attemptApiRequest")
+					: undefined
+
 			try {
 				const truncateResult = await manageContext({
 					messages: this.apiConversationHistory,
@@ -4006,6 +4075,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					currentProfileId,
 					metadata: contextMgmtMetadata,
 					environmentDetails: contextMgmtEnvironmentDetails,
+					filesReadByRoo: contextMgmtFilesReadByRoo,
+					cwd: this.cwd,
+					rooIgnoreController: this.rooIgnoreController,
 				})
 				if (truncateResult.messages !== this.apiConversationHistory) {
 					await this.overwriteApiConversationHistory(truncateResult.messages)
@@ -4129,9 +4201,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		const shouldIncludeTools = allTools.length > 0
 
-		// Parallel tool calls are disabled - feature is on hold
-		// Previously resolved from experiments.isEnabled(..., EXPERIMENT_IDS.MULTIPLE_NATIVE_TOOL_CALLS)
-		const parallelToolCallsEnabled = false
+		const parallelToolCallsEnabled = state?.experiments?.multipleNativeToolCalls ?? false
 
 		const metadata: ApiHandlerCreateMessageMetadata = {
 			mode: mode,
