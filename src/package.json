@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "RooVeterinaryInc",
-	"version": "3.44.2",
+	"version": "3.45.0",
 	"icon": "assets/icons/icon.png",
 	"galleryBanner": {
 		"color": "#617A91",
@@ -540,6 +540,7 @@
 		"@types/diff": "^5.2.1",
 		"@types/diff-match-patch": "^1.0.36",
 		"@types/glob": "^8.1.0",
+		"@types/json-stream-stringify": "^2.0.4",
 		"@types/lodash.debounce": "^4.0.9",
 		"@types/mocha": "^10.0.10",
 		"@types/node": "20.x",

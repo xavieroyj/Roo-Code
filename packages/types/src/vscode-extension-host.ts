@@ -303,8 +303,7 @@ export type ExtensionState = Pick<
 	| "soundEnabled"
 	| "soundVolume"
 	| "maxConcurrentFileReads"
-	| "terminalOutputLineLimit"
-	| "terminalOutputCharacterLimit"
+	| "terminalOutputPreviewSize"
 	| "terminalShellIntegrationTimeout"
 	| "terminalShellIntegrationDisabled"
 	| "terminalCommandDelay"
@@ -313,7 +312,6 @@ export type ExtensionState = Pick<
 	| "terminalZshOhMy"
 	| "terminalZshP10k"
 	| "terminalZdotdir"
-	| "terminalCompressProgressBar"
 	| "diagnosticsEnabled"
 	| "language"
 	| "modeApiConfigs"
@@ -782,6 +780,7 @@ export interface ClineSayTool {
 		| "newFileCreated"
 		| "codebaseSearch"
 		| "readFile"
+		| "readCommandOutput"
 		| "fetchInstructions"
 		| "listFilesTopLevel"
 		| "listFilesRecursive"
@@ -794,6 +793,12 @@ export interface ClineSayTool {
 		| "runSlashCommand"
 		| "updateTodoList"
 	path?: string
+	// For readCommandOutput
+	readStart?: number
+	readEnd?: number
+	totalBytes?: number
+	searchPattern?: string
+	matchCount?: number
 	diff?: string
 	content?: string
 	// Unified diff statistics computed by the extension
