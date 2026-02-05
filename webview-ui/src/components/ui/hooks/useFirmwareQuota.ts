@@ -5,8 +5,11 @@ import type { ExtensionMessage } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
 
 export interface FirmwareQuotaInfo {
-	used: number // 0 to 1 scale (1 = limit reached)
-	reset: string | null // ISO timestamp when quota resets, null if window hasn't started
+	windowUsed: number // 0 to 1 scale (1 = limit reached)
+	windowReset: string | null // ISO timestamp when window quota resets, null if window hasn't started
+	weeklyUsed: number // 0 to 1 scale (1 = limit reached)
+	weeklyReset: string | null // ISO timestamp when weekly quota resets
+	windowResetsRemaining: number
 }
 
 export const useFirmwareQuota = () => {
@@ -25,10 +28,13 @@ export const useFirmwareQuota = () => {
 				window.removeEventListener("message", handleMessage)
 				clearTimeout(timeout)
 
-				if (message.values?.used !== undefined) {
+				if (message.values?.windowUsed !== undefined) {
 					setQuota({
-						used: message.values.used,
-						reset: message.values.reset,
+						windowUsed: message.values.windowUsed,
+						windowReset: message.values.windowReset ?? null,
+						weeklyUsed: message.values.weeklyUsed ?? 0,
+						weeklyReset: message.values.weeklyReset ?? null,
+						windowResetsRemaining: message.values.windowResetsRemaining ?? 0,
 					})
 					setError(null)
 				} else if (message.values?.error) {

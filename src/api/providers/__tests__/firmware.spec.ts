@@ -483,8 +483,11 @@ describe("Firmware fetchers", () => {
 			mockFetch.mockResolvedValueOnce({
 				ok: true,
 				json: async () => ({
-					used: 0.5217,
-					reset: "2026-01-25T11:02:14.242Z",
+					windowUsed: 0.0008,
+					windowReset: "2026-02-05T09:42:38.915Z",
+					weeklyUsed: 0.0002,
+					weeklyReset: "2026-02-12T00:00:00.000Z",
+					windowResetsRemaining: 2,
 				}),
 			})
 
@@ -499,8 +502,11 @@ describe("Firmware fetchers", () => {
 				}),
 			)
 
-			expect(quota.used).toBe(0.5217)
-			expect(quota.reset).toBe("2026-01-25T11:02:14.242Z")
+			expect(quota.windowUsed).toBe(0.0008)
+			expect(quota.windowReset).toBe("2026-02-05T09:42:38.915Z")
+			expect(quota.weeklyUsed).toBe(0.0002)
+			expect(quota.weeklyReset).toBe("2026-02-12T00:00:00.000Z")
+			expect(quota.windowResetsRemaining).toBe(2)
 		})
 
 		it("should handle missing fields with defaults", async () => {
@@ -511,8 +517,11 @@ describe("Firmware fetchers", () => {
 
 			const quota = await getFirmwareQuota("test-key")
 
-			expect(quota.used).toBe(0)
-			expect(quota.reset).toBeDefined()
+			expect(quota.windowUsed).toBe(0)
+			expect(quota.windowReset).toBeNull()
+			expect(quota.weeklyUsed).toBe(0)
+			expect(quota.weeklyReset).toBeNull()
+			expect(quota.windowResetsRemaining).toBe(0)
 		})
 
 		it("should throw error on HTTP failure", async () => {

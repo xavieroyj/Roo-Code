@@ -118,16 +118,24 @@ export async function getFirmwareModels(apiKey?: string): Promise<ModelRecord> {
 }
 
 export interface FirmwareQuotaResponse {
-	used: number // 0 to 1 scale (1 = limit reached)
-	reset: string | null // ISO timestamp when quota resets, null if window hasn't started
+	windowUsed: number // 0 to 1 scale (1 = limit reached)
+	windowReset: string | null // ISO timestamp when window quota resets, null if window hasn't started
+	weeklyUsed: number // 0 to 1 scale (1 = limit reached)
+	weeklyReset: string | null // ISO timestamp when weekly quota resets
+	windowResetsRemaining: number
 }
 
 /**
  * Fetches quota information from the Firmware.ai API
  *
- * Response format: { "used": 0.5217, "reset": "2026-01-25T11:02:14.242Z" }
- * - used: Amount used in the current window (0 to 1, where 1 = limit reached)
- * - reset: ISO timestamp when the quota resets
+ * Response format:
+ * {
+ *   "windowUsed": 0.0008,
+ *   "windowReset": "2026-02-05T09:42:38.915Z",
+ *   "weeklyUsed": 0.0002,
+ *   "weeklyReset": "2026-02-12T00:00:00.000Z",
+ *   "windowResetsRemaining": 2
+ * }
  *
  * @param apiKey The API key for the Firmware.ai provider
  * @returns A promise that resolves to quota information
@@ -159,8 +167,11 @@ export async function getFirmwareQuota(apiKey: string): Promise<FirmwareQuotaRes
 			const data = await response.json()
 
 			return {
-				used: data.used ?? 0,
-				reset: data.reset ?? null,
+				windowUsed: data.windowUsed ?? 0,
+				windowReset: data.windowReset ?? null,
+				weeklyUsed: data.weeklyUsed ?? 0,
+				weeklyReset: data.weeklyReset ?? null,
+				windowResetsRemaining: typeof data.windowResetsRemaining === "number" ? data.windowResetsRemaining : 0,
 			}
 		} finally {
 			clearTimeout(timeoutId)
