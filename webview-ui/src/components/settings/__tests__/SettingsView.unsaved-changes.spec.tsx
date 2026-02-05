@@ -34,6 +34,37 @@ vi.mock("@src/components/ui", () => ({
 			Toggle
 		</button>
 	),
+	Input: ({ value, onChange, placeholder, id, type, className, ...props }: any) => (
+		<input
+			type={type || "text"}
+			value={value}
+			onChange={onChange}
+			placeholder={placeholder}
+			id={id}
+			className={className}
+			{...props}
+		/>
+	),
+	Textarea: ({ value, onChange, placeholder, id, className, ...props }: any) => (
+		<textarea
+			value={value}
+			onChange={onChange}
+			placeholder={placeholder}
+			id={id}
+			className={className}
+			{...props}
+		/>
+	),
+	Checkbox: ({ checked, onCheckedChange, id, className, ...props }: any) => (
+		<input
+			type="checkbox"
+			checked={checked}
+			onChange={(e) => onCheckedChange?.(e.target.checked)}
+			id={id}
+			className={className}
+			{...props}
+		/>
+	),
 	AlertDialog: ({ children }: any) => <div>{children}</div>,
 	AlertDialogContent: ({ children }: any) => <div>{children}</div>,
 	AlertDialogTitle: ({ children }: any) => <div>{children}</div>,
@@ -55,6 +86,31 @@ vi.mock("@src/components/ui", () => ({
 	Popover: ({ children }: any) => <>{children}</>,
 	PopoverTrigger: ({ children }: any) => <>{children}</>,
 	PopoverContent: ({ children }: any) => <div>{children}</div>,
+	// Add Dialog components (used by CreateSkillDialog)
+	Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
+	DialogContent: ({ children, className }: any) => (
+		<div data-testid="dialog-content" className={className}>
+			{children}
+		</div>
+	),
+	DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
+	DialogTitle: ({ children }: any) => <div data-testid="dialog-title">{children}</div>,
+	DialogDescription: ({ children }: any) => <div data-testid="dialog-description">{children}</div>,
+	DialogFooter: ({ children }: any) => <div data-testid="dialog-footer">{children}</div>,
+	// Add Select components (used by CreateSkillDialog)
+	Select: ({ children, value, onValueChange: _onValueChange }: any) => (
+		<div data-testid="select" data-value={value}>
+			{children}
+		</div>
+	),
+	SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
+	SelectItem: ({ children, value }: any) => (
+		<div data-testid={`select-item-${value}`} data-value={value}>
+			{children}
+		</div>
+	),
+	SelectTrigger: ({ children }: any) => <div data-testid="select-trigger">{children}</div>,
+	SelectValue: ({ placeholder }: any) => <div data-testid="select-value">{placeholder}</div>,
 }))
 
 // Mock ModesView and McpView since they're rendered during indexing
@@ -198,7 +254,6 @@ describe("SettingsView - Unsaved Changes Detection", () => {
 		maxReadFileLine: -1,
 		maxImageFileSize: 5,
 		maxTotalImageSize: 20,
-		maxConcurrentFileReads: 5,
 		customCondensingPrompt: "",
 		customSupportPrompts: {},
 		profileThresholds: {},

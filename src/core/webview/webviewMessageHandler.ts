@@ -32,6 +32,14 @@ import { ClineProvider } from "./ClineProvider"
 import { BrowserSessionPanelManager } from "./BrowserSessionPanelManager"
 import { handleCheckpointRestoreOperation } from "./checkpointRestoreHandler"
 import { generateErrorDiagnostics } from "./diagnosticsHandler"
+import {
+	handleRequestSkills,
+	handleCreateSkill,
+	handleDeleteSkill,
+	handleMoveSkill,
+	handleUpdateSkillModes,
+	handleOpenSkillFile,
+} from "./skillsMessageHandler"
 import { changeLanguage, t } from "../../i18n"
 import { Package } from "../../shared/package"
 import { type RouterName, toRouterName } from "../../shared/api"
@@ -491,12 +499,18 @@ export const webviewMessageHandler = async (
 						if (!checkExistKey(listApiConfig[0])) {
 							const { apiConfiguration } = await provider.getState()
 
-							await provider.providerSettingsManager.saveConfig(
-								listApiConfig[0].name ?? "default",
-								apiConfiguration,
-							)
+							// Only save if the current configuration has meaningful settings
+							// (e.g., API keys). This prevents saving a default "anthropic"
+							// fallback when no real config exists, which can happen during
+							// CLI initialization before provider settings are applied.
+							if (checkExistKey(apiConfiguration)) {
+								await provider.providerSettingsManager.saveConfig(
+									listApiConfig[0].name ?? "default",
+									apiConfiguration,
+								)
 
-							listApiConfig[0].apiProvider = apiConfiguration.apiProvider
+								listApiConfig[0].apiProvider = apiConfiguration.apiProvider
+							}
 						}
 					}
 
@@ -889,7 +903,7 @@ export const webviewMessageHandler = async (
 
 			// Base candidates (only those handled by this aggregate fetcher)
 			const candidates: { key: RouterName; options: GetModelsOptions }[] = [
-				{ key: "openrouter", options: { provider: "openrouter" } },
+				{ key: "openrouter", options: { provider: "openrouter", baseUrl: apiConfiguration.openRouterBaseUrl } },
 				{
 					key: "requesty",
 					options: {
@@ -1476,10 +1490,6 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
-		case "enableMcpServerCreation":
-			await updateGlobalState("enableMcpServerCreation", message.bool ?? true)
-			await provider.postStateToWebview()
-			break
 		case "remoteControlEnabled":
 			try {
 				await CloudService.instance.updateUserSettings({ extensionBridgeEnabled: message.bool ?? false })
@@ -2281,10 +2291,9 @@ export const webviewMessageHandler = async (
 					const yamlContent = await fs.readFile(fileUri[0].fsPath, "utf-8")
 
 					// Import the mode with the specified source level
-					const result = await provider.customModesManager.importModeWithRules(
-						yamlContent,
-						message.source || "project", // Default to project if not specified
-					)
+					// Note: "built-in" is not a valid source for importing modes
+					const importSource = message.source === "global" ? "global" : "project"
+					const result = await provider.customModesManager.importModeWithRules(yamlContent, importSource)
 
 					if (result.success) {
 						// Update state after importing
@@ -3005,6 +3014,30 @@ export const webviewMessageHandler = async (
 				provider.log(`Error fetching modes: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`)
 				await provider.postMessageToWebview({ type: "modes", modes: [] })
 			}
+			break
+		}
+		case "requestSkills": {
+			await handleRequestSkills(provider)
+			break
+		}
+		case "createSkill": {
+			await handleCreateSkill(provider, message)
+			break
+		}
+		case "deleteSkill": {
+			await handleDeleteSkill(provider, message)
+			break
+		}
+		case "moveSkill": {
+			await handleMoveSkill(provider, message)
+			break
+		}
+		case "updateSkillModes": {
+			await handleUpdateSkillModes(provider, message)
+			break
+		}
+		case "openSkillFile": {
+			await handleOpenSkillFile(provider, message)
 			break
 		}
 		case "openCommandFile": {

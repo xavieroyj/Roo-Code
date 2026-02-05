@@ -41,7 +41,8 @@
 		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Idioma",
-		"about": "Acerca de Roo Code"
+		"about": "Acerca de Roo Code",
+		"skills": "Skills"
 	},
 	"about": {
 		"bugReport": {
@@ -68,7 +69,39 @@
 		}
 	},
 	"slashCommands": {
-		"description": "Gestiona tus comandos de barra para ejecutar rápidamente flujos de trabajo y acciones personalizadas. <DocsLink>Saber más</DocsLink>"
+		"description": "Gestiona tus comandos de barra para ejecutar rápidamente flujos de trabajo y acciones personalizadas. <DocsLink>Saber más</DocsLink>",
+		"workspaceCommands": "Comandos del espacio de trabajo",
+		"globalCommands": "Comandos globales",
+		"noWorkspaceCommands": "Sin comandos en este proyecto aún.",
+		"noGlobalCommands": "Sin comandos globales aún.",
+		"addCommand": "Agregar comando de barra",
+		"editCommand": "Editar comando",
+		"deleteCommand": "Eliminar comando",
+		"deleteDialog": {
+			"title": "Eliminar comando",
+			"description": "¿Estás seguro de que quieres eliminar el comando \"{{name}}\"? Esta acción no se puede deshacer.",
+			"confirm": "Eliminar",
+			"cancel": "Cancelar"
+		},
+		"createDialog": {
+			"title": "Crear nuevo comando de barra",
+			"nameLabel": "Nombre",
+			"namePlaceholder": "my-command-name",
+			"nameHint": "Solo letras minúsculas, números, guiones y guiones bajos",
+			"sourceLabel": "Ubicación",
+			"create": "Crear",
+			"cancel": "Cancelar"
+		},
+		"source": {
+			"global": "Global (disponible en todos los espacios de trabajo)",
+			"project": "Espacio de trabajo"
+		},
+		"validation": {
+			"nameRequired": "El nombre es obligatorio",
+			"nameTooLong": "El nombre debe tener 64 caracteres o menos",
+			"nameInvalid": "El nombre solo puede contener letras, números, guiones y guiones bajos"
+		},
+		"footer": "Usa comandos de barra para acceder rápidamente a indicaciones y flujos de trabajo frecuentemente utilizados."
 	},
 	"prompts": {
 		"description": "Configura indicaciones de soporte que se utilizan para acciones rápidas como mejorar indicaciones, explicar código y solucionar problemas. Estas indicaciones ayudan a Roo a brindar mejor asistencia para tareas comunes de desarrollo."
@@ -243,7 +276,6 @@
 		},
 		"apiRequestLimit": {
 			"title": "Solicitudes máximas",
-			"description": "Realizar automáticamente esta cantidad de solicitudes a la API antes de pedir aprobación para continuar con la tarea.",
 			"unlimited": "Ilimitado"
 		},
 		"selectOptionsFirst": "Selecciona al menos una opción a continuación para habilitar la aprobación automática",
@@ -846,10 +878,6 @@
 			"name": "Habilitar comandos slash iniciados por el modelo",
 			"description": "Cuando está habilitado, Roo puede ejecutar tus comandos slash para ejecutar flujos de trabajo."
 		},
-		"MULTIPLE_NATIVE_TOOL_CALLS": {
-			"name": "Llamadas paralelas a herramientas",
-			"description": "Cuando está habilitado, el protocolo nativo puede ejecutar múltiples herramientas en un solo turno de mensaje del asistente."
-		},
 		"CUSTOM_TOOLS": {
 			"name": "Habilitar herramientas personalizadas",
 			"description": "Cuando está habilitado, Roo puede cargar y usar herramientas TypeScript/JavaScript personalizadas desde el directorio .roo/tools de tu proyecto o ~/.roo/tools para herramientas globales. Nota: estas herramientas se aprobarán automáticamente.",
@@ -902,7 +930,6 @@
 		"simplifiedExplanation": "Puedes ajustar la configuración detallada del modelo más tarde."
 	},
 	"footer": {
-		"feedback": "Si tiene alguna pregunta o comentario, no dude en abrir un issue en <githubLink>github.com/RooCodeInc/Roo-Code</githubLink> o unirse a <redditLink>reddit.com/r/RooCode</redditLink> o <discordLink>discord.gg/roocode</discordLink>",
 		"telemetry": {
 			"label": "Permitir informes anónimos de errores y uso",
 			"description": "Ayuda a mejorar Roo Code enviando datos de uso anónimos e informes de errores. Esta telemetría no recopila código, prompts o información personal. Consulta nuestra <privacyLink>política de privacidad</privacyLink> para más detalles."
@@ -996,5 +1023,58 @@
 			"label": "Requerir {{primaryMod}}+Enter para enviar mensajes",
 			"description": "Cuando está activado, debes presionar {{primaryMod}}+Enter para enviar mensajes en lugar de solo Enter"
 		}
+	},
+	"skills": {
+		"description": "Gestiona skills que proporcionan instrucciones contextuales al agente. Las skills se aplican automáticamente cuando son relevantes para tus tareas. <DocsLink>Más información</DocsLink>",
+		"workspaceSkills": "Skills del espacio de trabajo",
+		"globalSkills": "Skills globales",
+		"noWorkspaceSkills": "Sin skills en este proyecto aún.",
+		"noGlobalSkills": "Sin skills globales aún.",
+		"addSkill": "Agregar Skill",
+		"editSkill": "Editar skill",
+		"deleteSkill": "Eliminar skill",
+		"configureModes": "Disponibilidad de modo",
+		"modeAny": "Cualquier modo",
+		"modeCount": "{{count}} modos",
+		"deleteDialog": {
+			"title": "Eliminar Skill",
+			"description": "¿Estás seguro de que quieres eliminar la skill \"{{name}}\"? Esta acción no se puede deshacer.",
+			"confirm": "Eliminar",
+			"cancel": "Cancelar"
+		},
+		"modeDialog": {
+			"title": "Configurar modos de Skill",
+			"description": "Elige qué modos pueden usar esta skill",
+			"intro": "Para mantener tu contexto ligero, recomendamos que solo hagas disponibles las skills para los modos que las necesitan.",
+			"anyMode": "Cualquier modo (disponible en todas partes)",
+			"save": "Guardar",
+			"cancel": "Cancelar"
+		},
+		"createDialog": {
+			"title": "Crear Nueva Skill",
+			"nameLabel": "Nombre",
+			"namePlaceholder": "mi-nombre-de-skill",
+			"descriptionLabel": "Descripción",
+			"descriptionPlaceholder": "Describe cuándo debería usarse esta skill...",
+			"sourceLabel": "Ubicación",
+			"modeLabel": "Modo (opcional)",
+			"modePlaceholder": "Cualquier modo",
+			"modeHint": "Restringe esta skill a un modo específico",
+			"modeAny": "Cualquier modo",
+			"create": "Crear",
+			"cancel": "Cancelar"
+		},
+		"source": {
+			"global": "Global (disponible en todos los proyectos)",
+			"project": "Proyecto (solo este espacio de trabajo)"
+		},
+		"validation": {
+			"nameRequired": "El nombre es obligatorio",
+			"nameTooLong": "El nombre debe tener como máximo 64 caracteres",
+			"nameInvalid": "El nombre debe tener entre 1 y 64 caracteres, solo letras minúsculas, números o guiones",
+			"descriptionRequired": "La descripción es obligatoria",
+			"descriptionTooLong": "La descripción debe tener como máximo 1024 caracteres"
+		},
+		"footer": "Crea tus propias skills con el modo Skill Writer, disponible en el <MarketplaceLink>Modes Marketplace</MarketplaceLink>."
 	}
 }

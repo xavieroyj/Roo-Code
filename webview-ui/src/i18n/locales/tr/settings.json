@@ -41,7 +41,8 @@
 		"ui": "UI",
 		"experimental": "Deneysel",
 		"language": "Dil",
-		"about": "Roo Code Hakkında"
+		"about": "Roo Code Hakkında",
+		"skills": "Skills"
 	},
 	"about": {
 		"bugReport": {
@@ -68,7 +69,39 @@
 		}
 	},
 	"slashCommands": {
-		"description": "Özel iş akışlarını ve eylemleri hızlı bir şekilde yürütmek için eğik çizgi komutlarınızı yönetin. <DocsLink>Daha fazla bilgi edinin</DocsLink>"
+		"description": "Özel iş akışlarını ve eylemleri hızlı bir şekilde yürütmek için eğik çizgi komutlarınızı yönetin. <DocsLink>Daha fazla bilgi edinin</DocsLink>",
+		"workspaceCommands": "Çalışma Alanı Komutları",
+		"globalCommands": "Genel Komutlar",
+		"noWorkspaceCommands": "Bu projede henüz komut yok.",
+		"noGlobalCommands": "Henüz genel komut yok.",
+		"addCommand": "Eğik Çizgi Komutu Ekle",
+		"editCommand": "Komutu düzenle",
+		"deleteCommand": "Komutu sil",
+		"deleteDialog": {
+			"title": "Komutu sil",
+			"description": "\"{{name}}\" komutunu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+			"confirm": "Sil",
+			"cancel": "İptal"
+		},
+		"createDialog": {
+			"title": "Yeni Eğik Çizgi Komutu Oluştur",
+			"nameLabel": "Ad",
+			"namePlaceholder": "my-command-name",
+			"nameHint": "Yalnızca küçük harfler, sayılar, tireleme ve alt çizgi",
+			"sourceLabel": "Konum",
+			"create": "Oluştur",
+			"cancel": "İptal"
+		},
+		"source": {
+			"global": "Genel (tüm çalışma alanlarında mevcut)",
+			"project": "Çalışma Alanı"
+		},
+		"validation": {
+			"nameRequired": "Ad gereklidir",
+			"nameTooLong": "Ad en fazla 64 karakter olmalıdır",
+			"nameInvalid": "Ad yalnızca harfleri, sayıları, tirelemeyi ve alt çizgiyi içerebilir"
+		},
+		"footer": "Sık kullanılan komutlara ve iş akışlarına hızlı erişim için eğik çizgi komutlarını kullanın."
 	},
 	"prompts": {
 		"description": "Prompt geliştirme, kod açıklama ve sorun çözme gibi hızlı eylemler için kullanılan destek promptlarını yapılandırın. Bu promptlar, Roo'nun yaygın geliştirme görevleri için daha iyi destek sağlamasına yardımcı olur."
@@ -243,7 +276,6 @@
 		},
 		"apiRequestLimit": {
 			"title": "Maksimum İstek",
-			"description": "Göreve devam etmek için onay istemeden önce bu sayıda API isteği otomatik olarak yap.",
 			"unlimited": "Sınırsız"
 		},
 		"selectOptionsFirst": "Otomatik onayı etkinleştirmek için aşağıdan en az bir seçenek seçin",
@@ -664,7 +696,6 @@
 				"label": "Maksimum tanı mesajı",
 				"description": "Dosya başına dahil edilecek maksimum tanı mesajı sayısı. Bu sınır hem otomatik dahil etme (onay kutusu etkinleştirildiğinde) hem de manuel @problems bahisleri için geçerlidir. Daha yüksek değerler daha fazla bağlam sağlar ancak jeton kullanımını artırır.",
 				"resetTooltip": "Varsayılan değere sıfırla (50)",
-				"unlimited": "Sınırsız tanı mesajları",
 				"unlimitedLabel": "Sınırsız"
 			},
 			"delayAfterWrite": {
@@ -847,10 +878,6 @@
 			"name": "Model tarafından başlatılan slash komutlarını etkinleştir",
 			"description": "Etkinleştirildiğinde, Roo iş akışlarını yürütmek için slash komutlarınızı çalıştırabilir."
 		},
-		"MULTIPLE_NATIVE_TOOL_CALLS": {
-			"name": "Paralel araç çağrıları",
-			"description": "Etkinleştirildiğinde, yerel protokol tek bir asistan mesaj turunda birden fazla araç yürütebilir."
-		},
 		"CUSTOM_TOOLS": {
 			"name": "Özel araçları etkinleştir",
 			"description": "Etkinleştirildiğinde, Roo projenizin .roo/tools dizininden veya global araçlar için ~/.roo/tools dizininden özel TypeScript/JavaScript araçlarını yükleyebilir ve kullanabilir. Not: Bu araçlar otomatik olarak onaylanacaktır.",
@@ -903,7 +930,6 @@
 		"simplifiedExplanation": "Ayrıntılı model ayarlarını daha sonra ayarlayabilirsiniz."
 	},
 	"footer": {
-		"feedback": "Herhangi bir sorunuz veya geri bildiriminiz varsa, <githubLink>github.com/RooCodeInc/Roo-Code</githubLink> adresinde bir konu açmaktan veya <redditLink>reddit.com/r/RooCode</redditLink> ya da <discordLink>discord.gg/roocode</discordLink>'a katılmaktan çekinmeyin",
 		"telemetry": {
 			"label": "Anonim hata ve kullanım raporlamaya izin ver",
 			"description": "Anonim kullanım verileri ve hata raporları göndererek Roo Code'u geliştirmeye yardım edin. Bu telemetri kod, prompt veya kişisel bilgi toplamaz. Daha fazla ayrıntı için <privacyLink>gizlilik politikamıza</privacyLink> bakın. Bunu istediğiniz zaman kapatabilirsiniz."
@@ -997,5 +1023,58 @@
 			"label": "Mesaj göndermek için {{primaryMod}}+Enter gerekli",
 			"description": "Etkinleştirildiğinde, sadece Enter yerine mesaj göndermek için {{primaryMod}}+Enter'a basmalısınız"
 		}
+	},
+	"skills": {
+		"description": "Ajana bağlamsal talimatlar sağlayan becerileri yönetin. Beceriler, görevlerinizle ilgili olduklarında otomatik olarak uygulanır. <DocsLink>Daha fazla bilgi</DocsLink>",
+		"workspaceSkills": "Çalışma Alanı Becerileri",
+		"globalSkills": "Genel Beceriler",
+		"noWorkspaceSkills": "Bu projede henüz beceri yok.",
+		"noGlobalSkills": "Yapılandırılmış genel beceri yok. Tüm projelerde kullanılabilir ajan yetenekleri eklemek için bir tane oluşturun.",
+		"addSkill": "Beceri Ekle",
+		"editSkill": "Beceriyi düzenle",
+		"deleteSkill": "Beceriyi sil",
+		"configureModes": "Mod Kullanılabilirliği",
+		"modeAny": "Herhangi bir mod",
+		"modeCount": "{{count}} mod",
+		"deleteDialog": {
+			"title": "Beceriyi Sil",
+			"description": "\"{{name}}\" becerisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+			"confirm": "Sil",
+			"cancel": "İptal"
+		},
+		"modeDialog": {
+			"title": "Beceri Modlarını Yapılandır",
+			"description": "Bu beceriyi kullanabilecek modları seçin",
+			"intro": "Bağlamınızı hafif tutmak için, becerileri yalnızca onlara ihtiyaç duyan modlar için kullanılabilir hale getirilmesini öneririz.",
+			"anyMode": "Herhangi bir mod (her yerde mevcut)",
+			"save": "Kaydet",
+			"cancel": "İptal"
+		},
+		"createDialog": {
+			"title": "Yeni Beceri Oluştur",
+			"nameLabel": "Ad",
+			"namePlaceholder": "benim-beceri-adim",
+			"descriptionLabel": "Açıklama",
+			"descriptionPlaceholder": "Bu becerinin ne zaman kullanılması gerektiğini açıklayın...",
+			"sourceLabel": "Konum",
+			"modeLabel": "Mod (isteğe bağlı)",
+			"modePlaceholder": "Herhangi bir mod",
+			"modeHint": "Bu beceriyi belirli bir modla sınırlayın",
+			"modeAny": "Herhangi bir mod",
+			"create": "Oluştur",
+			"cancel": "İptal"
+		},
+		"source": {
+			"global": "Genel (tüm projelerde kullanılabilir)",
+			"project": "Proje (yalnızca bu çalışma alanı)"
+		},
+		"validation": {
+			"nameRequired": "Ad gereklidir",
+			"nameTooLong": "Ad en fazla 64 karakter olmalıdır",
+			"nameInvalid": "Ad 1-64 küçük harf, rakam veya kısa çizgi olmalıdır",
+			"descriptionRequired": "Açıklama gereklidir",
+			"descriptionTooLong": "Açıklama en fazla 1024 karakter olmalıdır"
+		},
+		"footer": "Skill Writer modu ile kendi becerilerinizi oluşturun. <MarketplaceLink>Modes Marketplace</MarketplaceLink>'de mevcut."
 	}
 }

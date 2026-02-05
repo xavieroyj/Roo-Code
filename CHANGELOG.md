@@ -1,5 +1,47 @@
 # Roo Code Changelog
 
+## [3.46.2] - 2026-02-03
+
+- Fix: Queue messages during command execution instead of losing them (PR #11140 by @mrubens)
+- Fix: Transform tool blocks to text before condensing to prevent context corruption (PR #10975 by @daniel-lxs)
+- Fix: Add image content support to MCP tool responses (PR #10874 by @roomote)
+- Fix: Remove deprecated text-embedding-004 and migrate code index to gemini-embedding-001 (PR #11038 by @roomote)
+- Feat: Use custom Base URL for OpenRouter model list fetch (#11150 by @sebastianlang84, PR #11154 by @roomote)
+- Feat: Migrate Mistral provider to AI SDK (PR #11089 by @daniel-lxs)
+- Feat: Migrate SambaNova provider to AI SDK (PR #11153 by @roomote)
+- Feat: Migrate xAI provider to AI SDK (PR #11158 by @roomote)
+- Chore: Remove Feature Request from issue template options (PR #11141 by @roomote)
+- Fix: IPC improvements for task cancellation and queued message handling (PR #11162 by @cte)
+
+## [3.46.1] - 2026-01-30
+
+- Fix: Sanitize tool_use_id in tool_result blocks to match API history, preventing message format errors (PR #11131 by @daniel-lxs)
+- Add: Mode dropdown to change skill mode dynamically, allowing more flexible skill configuration (PR #11102 by @SannidhyaSah)
+- Add: Import settings option in the initial welcome screen for easier onboarding (#10992 by @emeraldcheshire, PR #10994 by @roomote)
+- Chore: Treat extension .env as optional to simplify development setup (PR #11116 by @hannesrudolph)
+
+## [3.46.0] - 2026-01-30
+
+![3.46.0 Release - Parallel Processing Power](/releases/3.46.0-release.png)
+
+- Parallel tool calls enabled by default for improved performance (PR #11031 by @daniel-lxs)
+- Codex-inspired read_file refactor introduces indentation mode for extracting complete semantic code blocks without mid-function truncation, ideal when targeting specific lines from search results or errors (#10239 by @pwilkin, PR #10981 by @hannesrudolph)
+- Lossless terminal output with new read_command_output tool allows retrieving full command output from truncated executions with pagination and regex filtering (#10941 by @hannesrudolph, PR #10944 by @hannesrudolph)
+- New skill system replaces fetch_instructions with a dedicated skill tool and built-in skills for create-mcp-server and create-mode, with configurable skill locations and mandatory skill checks (#11062 by @hannesrudolph, PR #11084 by @hannesrudolph)
+- Skills management UI added to settings panel for managing workspace and global skills (#10513 by @SannidhyaSah, PR #10844 by @SannidhyaSah)
+- AI SDK provider migrations: Moonshot (PR #11063 by @daniel-lxs), DeepSeek (PR #11079 by @daniel-lxs), Cerebras (PR #11086 by @daniel-lxs), Groq (PR #11088 by @daniel-lxs), and Fireworks (PR #11118 by @daniel-lxs) now use the AI SDK for better streaming and tool support
+- Add OpenAI-compatible base provider infrastructure for AI SDK migrations (PR #11063 by @daniel-lxs)
+- Add AI SDK dependencies and message conversion utilities (PR #11047 by @daniel-lxs)
+- React Compiler integration added to webview-ui for automatic memoization and performance improvements (#9916 by @In-line, PR #9565 by @In-line)
+- Fix: Include reserved output tokens in task header percentage calculation (PR #11034 by @app/roomote)
+- Fix: Calculate header percentage based on available input space (PR #11054 by @app/roomote)
+- Fix: Prevent time-travel bug in parallel tool calling (PR #11046 by @daniel-lxs)
+- Docs: Clarify read_command_output search param should be omitted when not filtering (PR #11056 by @hannesrudolph)
+- Add pnpm serve command for code-server development (PR #10964 by @mrubens)
+- Update Next.js to latest version (PR #11108 by @cte)
+- Replace bespoke navigation menu with shadcn navigation menu on website (PR #11117 by @app/roomote)
+- Add Linear integration marketing page to website (PR #11028 by @app/roomote)
+
 ## [3.45.0] - 2026-01-27
 
 ![3.45.0 Release - Smart Code Folding](/releases/3.45.0-release.png)

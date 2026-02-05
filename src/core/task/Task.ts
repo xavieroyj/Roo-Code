@@ -356,6 +356,20 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	userMessageContentReady = false
 
 	/**
+	 * Flag indicating whether the assistant message for the current streaming session
+	 * has been saved to API conversation history.
+	 *
+	 * This is critical for parallel tool calling: tools should NOT execute until
+	 * the assistant message is saved. Otherwise, if a tool like `new_task` triggers
+	 * `flushPendingToolResultsToHistory()`, the user message with tool_results would
+	 * appear BEFORE the assistant message with tool_uses, causing API errors.
+	 *
+	 * Reset to `false` at the start of each API request.
+	 * Set to `true` after the assistant message is saved in `recursivelyMakeClineRequests`.
+	 */
+	assistantMessageSavedToHistory = false
+
+	/**
 	 * Push a tool_result block to userMessageContent, preventing duplicates.
 	 * Duplicate tool_use_ids cause API errors.
 	 *
@@ -376,6 +390,127 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.userMessageContent.push(toolResult)
 		return true
 	}
+
+	/**
+	 * Handle a tool call streaming event (tool_call_start, tool_call_delta, or tool_call_end).
+	 * This is used both for processing events from NativeToolCallParser (legacy providers)
+	 * and for direct AI SDK events (DeepSeek, Moonshot, etc.).
+	 *
+	 * @param event - The tool call event to process
+	 */
+	private handleToolCallEvent(
+		event:
+			| { type: "tool_call_start"; id: string; name: string }
+			| { type: "tool_call_delta"; id: string; delta: string }
+			| { type: "tool_call_end"; id: string },
+	): void {
+		if (event.type === "tool_call_start") {
+			// Guard against duplicate tool_call_start events for the same tool ID.
+			// This can occur due to stream retry, reconnection, or API quirks.
+			// Without this check, duplicate tool_use blocks with the same ID would
+			// be added to assistantMessageContent, causing API 400 errors:
+			// "tool_use ids must be unique"
+			if (this.streamingToolCallIndices.has(event.id)) {
+				console.warn(
+					`[Task#${this.taskId}] Ignoring duplicate tool_call_start for ID: ${event.id} (tool: ${event.name})`,
+				)
+				return
+			}
+
+			// Initialize streaming in NativeToolCallParser
+			NativeToolCallParser.startStreamingToolCall(event.id, event.name as ToolName)
+
+			// Before adding a new tool, finalize any preceding text block
+			// This prevents the text block from blocking tool presentation
+			const lastBlock = this.assistantMessageContent[this.assistantMessageContent.length - 1]
+			if (lastBlock?.type === "text" && lastBlock.partial) {
+				lastBlock.partial = false
+			}
+
+			// Track the index where this tool will be stored
+			const toolUseIndex = this.assistantMessageContent.length
+			this.streamingToolCallIndices.set(event.id, toolUseIndex)
+
+			// Create initial partial tool use
+			const partialToolUse: ToolUse = {
+				type: "tool_use",
+				name: event.name as ToolName,
+				params: {},
+				partial: true,
+			}
+
+			// Store the ID for native protocol
+			;(partialToolUse as any).id = event.id
+
+			// Add to content and present
+			this.assistantMessageContent.push(partialToolUse)
+			this.userMessageContentReady = false
+			presentAssistantMessage(this)
+		} else if (event.type === "tool_call_delta") {
+			// Process chunk using streaming JSON parser
+			const partialToolUse = NativeToolCallParser.processStreamingChunk(event.id, event.delta)
+
+			if (partialToolUse) {
+				// Get the index for this tool call
+				const toolUseIndex = this.streamingToolCallIndices.get(event.id)
+				if (toolUseIndex !== undefined) {
+					// Store the ID for native protocol
+					;(partialToolUse as any).id = event.id
+
+					// Update the existing tool use with new partial data
+					this.assistantMessageContent[toolUseIndex] = partialToolUse
+
+					// Present updated tool use
+					presentAssistantMessage(this)
+				}
+			}
+		} else if (event.type === "tool_call_end") {
+			// Finalize the streaming tool call
+			const finalToolUse = NativeToolCallParser.finalizeStreamingToolCall(event.id)
+
+			// Get the index for this tool call
+			const toolUseIndex = this.streamingToolCallIndices.get(event.id)
+
+			if (finalToolUse) {
+				// Store the tool call ID
+				;(finalToolUse as any).id = event.id
+
+				// Get the index and replace partial with final
+				if (toolUseIndex !== undefined) {
+					this.assistantMessageContent[toolUseIndex] = finalToolUse
+				}
+
+				// Clean up tracking
+				this.streamingToolCallIndices.delete(event.id)
+
+				// Mark that we have new content to process
+				this.userMessageContentReady = false
+
+				// Present the finalized tool call
+				presentAssistantMessage(this)
+			} else if (toolUseIndex !== undefined) {
+				// finalizeStreamingToolCall returned null (malformed JSON or missing args)
+				// Mark the tool as non-partial so it's presented as complete, but execution
+				// will be short-circuited in presentAssistantMessage with a structured tool_result.
+				const existingToolUse = this.assistantMessageContent[toolUseIndex]
+				if (existingToolUse && existingToolUse.type === "tool_use") {
+					existingToolUse.partial = false
+					// Ensure it has the ID for native protocol
+					;(existingToolUse as any).id = event.id
+				}
+
+				// Clean up tracking
+				this.streamingToolCallIndices.delete(event.id)
+
+				// Mark that we have new content to process
+				this.userMessageContentReady = false
+
+				// Present the tool call - validation will handle missing params
+				presentAssistantMessage(this)
+			}
+		}
+	}
+
 	didRejectTool = false
 	didAlreadyUseTool = false
 	didToolFailInCurrentTurn = false
@@ -540,6 +675,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.messageQueueStateChangedHandler = () => {
 			this.emit(RooCodeEventName.TaskUserMessage, this.taskId)
+			this.emit(RooCodeEventName.QueuedMessagesUpdated, this.taskId, this.messageQueueService.messages)
 			this.providerRef.deref()?.postStateToWebviewWithoutTaskHistory()
 		}
 
@@ -1060,6 +1196,36 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	public async flushPendingToolResultsToHistory(): Promise<void> {
 		// Only flush if there's actually pending content to save
 		if (this.userMessageContent.length === 0) {
+			return
+		}
+
+		// CRITICAL: Wait for the assistant message to be saved to API history first.
+		// Without this, tool_result blocks would appear BEFORE tool_use blocks in the
+		// conversation history, causing API errors like:
+		// "unexpected `tool_use_id` found in `tool_result` blocks"
+		//
+		// This can happen when parallel tools are called (e.g., update_todo_list + new_task).
+		// Tools execute during streaming via presentAssistantMessage, BEFORE the assistant
+		// message is saved. When new_task triggers delegation, it calls this method to
+		// flush pending results - but the assistant message hasn't been saved yet.
+		//
+		// The assistantMessageSavedToHistory flag is:
+		// - Reset to false at the start of each API request
+		// - Set to true after the assistant message is saved in recursivelyMakeClineRequests
+		if (!this.assistantMessageSavedToHistory) {
+			await pWaitFor(() => this.assistantMessageSavedToHistory || this.abort, {
+				interval: 50,
+				timeout: 30_000, // 30 second timeout as safety net
+			}).catch(() => {
+				// If timeout or abort, log and proceed anyway to avoid hanging
+				console.warn(
+					`[Task#${this.taskId}] flushPendingToolResultsToHistory: timed out waiting for assistant message to be saved`,
+				)
+			})
+		}
+
+		// If task was aborted while waiting, don't flush
+		if (this.abort) {
 			return
 		}
 
@@ -1610,8 +1776,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				customModes: state?.customModes,
 				experiments: state?.experiments,
 				apiConfiguration,
-				maxReadFileLine: state?.maxReadFileLine ?? -1,
-				maxConcurrentFileReads: state?.maxConcurrentFileReads ?? 5,
 				browserToolEnabled: state?.browserToolEnabled ?? true,
 				modelInfo,
 				includeAllToolsWithRestrictions: false,
@@ -1627,7 +1791,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				? {
 						tools: allTools,
 						tool_choice: "auto",
-						parallelToolCalls: false,
+						parallelToolCalls: true,
 					}
 				: {}),
 		}
@@ -2544,7 +2708,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				showRooIgnoredFiles = false,
 				includeDiagnosticMessages = true,
 				maxDiagnosticMessages = 50,
-				maxReadFileLine = -1,
 			} = (await this.providerRef.deref()?.getState()) ?? {}
 
 			const { content: parsedUserContent, mode: slashCommandMode } = await processUserContentMentions({
@@ -2556,7 +2719,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				showRooIgnoredFiles,
 				includeDiagnosticMessages,
 				maxDiagnosticMessages,
-				maxReadFileLine,
 			})
 
 			// Switch mode if specified in a slash command's frontmatter
@@ -2707,6 +2869,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				this.userMessageContentReady = false
 				this.didRejectTool = false
 				this.didAlreadyUseTool = false
+				this.assistantMessageSavedToHistory = false
 				// Reset tool failure flag for each new assistant turn - this ensures that tool failures
 				// only prevent attempt_completion within the same assistant message, not across turns
 				// (e.g., if a tool fails, then user sends a message saying "just complete anyway")
@@ -2814,118 +2977,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								})
 
 								for (const event of events) {
-									if (event.type === "tool_call_start") {
-										// Guard against duplicate tool_call_start events for the same tool ID.
-										// This can occur due to stream retry, reconnection, or API quirks.
-										// Without this check, duplicate tool_use blocks with the same ID would
-										// be added to assistantMessageContent, causing API 400 errors:
-										// "tool_use ids must be unique"
-										if (this.streamingToolCallIndices.has(event.id)) {
-											console.warn(
-												`[Task#${this.taskId}] Ignoring duplicate tool_call_start for ID: ${event.id} (tool: ${event.name})`,
-											)
-											continue
-										}
-
-										// Initialize streaming in NativeToolCallParser
-										NativeToolCallParser.startStreamingToolCall(event.id, event.name as ToolName)
-
-										// Before adding a new tool, finalize any preceding text block
-										// This prevents the text block from blocking tool presentation
-										const lastBlock =
-											this.assistantMessageContent[this.assistantMessageContent.length - 1]
-										if (lastBlock?.type === "text" && lastBlock.partial) {
-											lastBlock.partial = false
-										}
-
-										// Track the index where this tool will be stored
-										const toolUseIndex = this.assistantMessageContent.length
-										this.streamingToolCallIndices.set(event.id, toolUseIndex)
-
-										// Create initial partial tool use
-										const partialToolUse: ToolUse = {
-											type: "tool_use",
-											name: event.name as ToolName,
-											params: {},
-											partial: true,
-										}
-
-										// Store the ID for native protocol
-										;(partialToolUse as any).id = event.id
-
-										// Add to content and present
-										this.assistantMessageContent.push(partialToolUse)
-										this.userMessageContentReady = false
-										presentAssistantMessage(this)
-									} else if (event.type === "tool_call_delta") {
-										// Process chunk using streaming JSON parser
-										const partialToolUse = NativeToolCallParser.processStreamingChunk(
-											event.id,
-											event.delta,
-										)
-
-										if (partialToolUse) {
-											// Get the index for this tool call
-											const toolUseIndex = this.streamingToolCallIndices.get(event.id)
-											if (toolUseIndex !== undefined) {
-												// Store the ID for native protocol
-												;(partialToolUse as any).id = event.id
-
-												// Update the existing tool use with new partial data
-												this.assistantMessageContent[toolUseIndex] = partialToolUse
-
-												// Present updated tool use
-												presentAssistantMessage(this)
-											}
-										}
-									} else if (event.type === "tool_call_end") {
-										// Finalize the streaming tool call
-										const finalToolUse = NativeToolCallParser.finalizeStreamingToolCall(event.id)
-
-										// Get the index for this tool call
-										const toolUseIndex = this.streamingToolCallIndices.get(event.id)
-
-										if (finalToolUse) {
-											// Store the tool call ID
-											;(finalToolUse as any).id = event.id
-
-											// Get the index and replace partial with final
-											if (toolUseIndex !== undefined) {
-												this.assistantMessageContent[toolUseIndex] = finalToolUse
-											}
-
-											// Clean up tracking
-											this.streamingToolCallIndices.delete(event.id)
-
-											// Mark that we have new content to process
-											this.userMessageContentReady = false
-
-											// Present the finalized tool call
-											presentAssistantMessage(this)
-										} else if (toolUseIndex !== undefined) {
-											// finalizeStreamingToolCall returned null (malformed JSON or missing args)
-											// Mark the tool as non-partial so it's presented as complete, but execution
-											// will be short-circuited in presentAssistantMessage with a structured tool_result.
-											const existingToolUse = this.assistantMessageContent[toolUseIndex]
-											if (existingToolUse && existingToolUse.type === "tool_use") {
-												existingToolUse.partial = false
-												// Ensure it has the ID for native protocol
-												;(existingToolUse as any).id = event.id
-											}
-
-											// Clean up tracking
-											this.streamingToolCallIndices.delete(event.id)
-
-											// Mark that we have new content to process
-											this.userMessageContentReady = false
-
-											// Present the tool call - validation will handle missing params
-											presentAssistantMessage(this)
-										}
-									}
+									this.handleToolCallEvent(event)
 								}
 								break
 							}
+
+							// Direct handlers for AI SDK tool streaming events (DeepSeek, Moonshot, etc.)
+							// These providers emit tool_call_start/delta/end directly instead of tool_call_partial
+							case "tool_call_start":
+							case "tool_call_delta":
+							case "tool_call_end":
+								this.handleToolCallEvent(chunk)
+								break
 
 							case "tool_call": {
 								// Legacy: Handle complete tool calls (for backward compatibility)
@@ -3488,6 +3551,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						{ role: "assistant", content: assistantContent },
 						reasoningMessage || undefined,
 					)
+					this.assistantMessageSavedToHistory = true
 
 					TelemetryService.instance.captureConversationMessage(this.taskId, "assistant")
 				}
@@ -3712,11 +3776,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			customModePrompts,
 			customInstructions,
 			experiments,
-			enableMcpServerCreation,
 			browserToolEnabled,
 			language,
-			maxConcurrentFileReads,
-			maxReadFileLine,
 			apiConfiguration,
 			enableSubfolderRules,
 		} = state ?? {}
@@ -3751,12 +3812,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				customModes,
 				customInstructions,
 				experiments,
-				enableMcpServerCreation,
 				language,
 				rooIgnoreInstructions,
-				maxReadFileLine !== -1,
 				{
-					maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
 					todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
 					browserToolEnabled: browserToolEnabled ?? true,
 					useAgentRules:
@@ -3819,8 +3877,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				customModes: state?.customModes,
 				experiments: state?.experiments,
 				apiConfiguration,
-				maxReadFileLine: state?.maxReadFileLine ?? -1,
-				maxConcurrentFileReads: state?.maxConcurrentFileReads ?? 5,
 				browserToolEnabled: state?.browserToolEnabled ?? true,
 				modelInfo,
 				includeAllToolsWithRestrictions: false,
@@ -3836,7 +3892,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				? {
 						tools: allTools,
 						tool_choice: "auto",
-						parallelToolCalls: false,
+						parallelToolCalls: true,
 					}
 				: {}),
 		}
@@ -4035,8 +4091,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						customModes: state?.customModes,
 						experiments: state?.experiments,
 						apiConfiguration,
-						maxReadFileLine: state?.maxReadFileLine ?? -1,
-						maxConcurrentFileReads: state?.maxConcurrentFileReads ?? 5,
 						browserToolEnabled: state?.browserToolEnabled ?? true,
 						modelInfo,
 						includeAllToolsWithRestrictions: false,
@@ -4053,7 +4107,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					? {
 							tools: contextMgmtTools,
 							tool_choice: "auto",
-							parallelToolCalls: false,
+							parallelToolCalls: true,
 						}
 					: {}),
 			}
@@ -4201,8 +4255,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				customModes: state?.customModes,
 				experiments: state?.experiments,
 				apiConfiguration,
-				maxReadFileLine: state?.maxReadFileLine ?? -1,
-				maxConcurrentFileReads: state?.maxConcurrentFileReads ?? 5,
 				browserToolEnabled: state?.browserToolEnabled ?? true,
 				modelInfo,
 				includeAllToolsWithRestrictions: supportsAllowedFunctionNames,
@@ -4213,8 +4265,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		const shouldIncludeTools = allTools.length > 0
 
-		const parallelToolCallsEnabled = state?.experiments?.multipleNativeToolCalls ?? false
-
 		const metadata: ApiHandlerCreateMessageMetadata = {
 			mode: mode,
 			taskId: this.taskId,
@@ -4224,7 +4274,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				? {
 						tools: allTools,
 						tool_choice: "auto",
-						parallelToolCalls: parallelToolCallsEnabled,
+						parallelToolCalls: true,
 						// When mode restricts tools, provide allowedFunctionNames so providers
 						// like Gemini can see all tools in history but only call allowed ones
 						...(allowedFunctionNames ? { allowedFunctionNames } : {}),
@@ -4514,14 +4564,28 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 					continue
 				} else if (hasPlainTextReasoning) {
-					// Check if the model's preserveReasoning flag is set
-					// If true, include the reasoning block in API requests
-					// If false/undefined, strip it out (stored for history only, not sent back to API)
-					const shouldPreserveForApi = this.api.getModel().info.preserveReasoning === true
+					// Preserve plain-text reasoning blocks for:
+					// - models explicitly opting in via preserveReasoning
+					// - AI SDK providers (provider packages decide what to include in the native request)
+					const aiSdkProviders = new Set([
+						"deepseek",
+						"fireworks",
+						"moonshot",
+						"mistral",
+						"groq",
+						"xai",
+						"cerebras",
+						"sambanova",
+						"huggingface",
+					])
+
+					const shouldPreserveForApi =
+						this.api.getModel().info.preserveReasoning === true ||
+						aiSdkProviders.has(this.apiConfiguration.apiProvider ?? "")
+
 					let assistantContent: Anthropic.Messages.MessageParam["content"]
 
 					if (shouldPreserveForApi) {
-						// Include reasoning block in the content sent to API
 						assistantContent = contentArray
 					} else {
 						// Strip reasoning out - stored for history only, not sent back to API
