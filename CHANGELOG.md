@@ -1,5 +1,30 @@
 # Roo Code Changelog
 
+## 3.47.1 - 2026-02-05
+
+- Fix: Correct Bedrock model ID for Claude Opus 4.6, resolving model selection issues for Bedrock users (#11231 by @cogwirrel, PR #11232 by @roomote)
+- Fix: Guard against empty-string baseURL in provider constructors, preventing connection errors when baseURL is accidentally set to empty string (PR #11233 by @hannesrudolph)
+- Chore: Remove unused stripAppendedEnvironmentDetails and helpers to clean up codebase (#11228 by @hannesrudolph, PR #11226 by @hannesrudolph)
+
+## [3.47.0] - 2026-02-05
+
+![3.47.0 Release - Claude Opus 4.6 & GPT-5.3-Codex](/releases/3.47.0-release.png)
+
+- Add Claude Opus 4.6 support across all providers (#11223 by @hannesrudolph, PR #11224 by @hannesrudolph and @PeterDaveHello)
+- Add GPT-5.3-Codex model to OpenAI - ChatGPT provider (PR #11225 by @roomote)
+- Migrate Gemini and Vertex providers to AI SDK for improved reliability and consistency (PR #11180 by @daniel-lxs)
+- Improve Skills and Slash Commands settings UI with multi-mode support (PR #11157 by @brunobergher)
+- Add support for AGENTS.local.md personal override files (PR #11183 by @roomote)
+- Add Kimi K2.5 model to Fireworks provider (PR #11177 by @daniel-lxs)
+- Improve CLI dev experience and Roo provider API key support (PR #11203 by @cte)
+- Fix: Preserve reasoning parts in AI SDK message conversion (#11199 by @hannesrudolph, PR #11217 by @hannesrudolph)
+- Refactor: Append environment details into existing blocks for cleaner context (#11200 by @hannesrudolph, PR #11198 by @hannesrudolph)
+- Fix: Resolve race condition causing provider switch during CLI mode changes (PR #11205 by @cte)
+- Roo Code CLI v0.0.50 (PR #11204 by @cte)
+- Chore: Remove dead toolFormat code from getEnvironmentDetails (#11206 by @hannesrudolph, PR #11207 by @roomote)
+- Refactor: Simplify docs-extractor mode to focus on raw fact extraction (PR #11129 by @hannesrudolph)
+- Revert then re-land AI SDK reasoning fix (PR #11216 by @mrubens, PR #11196 by @hannesrudolph)
+
 ## [3.46.2] - 2026-02-03
 
 - Fix: Queue messages during command execution instead of losing them (PR #11140 by @mrubens)
